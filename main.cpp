@@ -49,18 +49,19 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 bool SINGLE_PLAYER = false; // set default player mode to 2
 
-constexpr char LEFT_SPRITE_FILEPATH[] = "assets/left.png";
-constexpr char RIGHT_SPRITE_FILEPATH[] = "assets/right.png";
-constexpr char BALL_SPRITE_FILEPATH[] = "assets/ball.png";
+constexpr char LEFT_SPRITE_FILEPATH[] = "assets/leek_sword.png";
+constexpr char RIGHT_SPRITE_FILEPATH[] = "assets/leek_sword.png";
+constexpr char BALL_SPRITE_FILEPATH[] = "assets/leek_sword.png";
 
 constexpr float MINIMUM_COLLISION_DISTANCE = 1.0f;
-constexpr glm::vec3 INIT_SCALE_LEFT = glm::vec3(1.0f, 1.0f, 1.0f);
-constexpr glm::vec3 INIT_SCALE_RIGHT = glm::vec3(1.0f, 1.0f, 1.0f);
+// leek sword is 1 to 5 ratio
+constexpr glm::vec3 INIT_SCALE_LEFT = glm::vec3(0.5f, 2.5f, 1.0f);
+constexpr glm::vec3 INIT_SCALE_RIGHT = glm::vec3(0.5f, 2.5f, 1.0f);
 constexpr glm::vec3 INIT_SCALE_BALL = glm::vec3(1.0f, 1.0f, 1.0f);
 
 constexpr glm::vec3 INIT_POS_LEFT = glm::vec3(1.0f, 1.0f, 1.0f);
 constexpr glm::vec3 INIT_POS_RIGHT = glm::vec3(1.0f, 1.0f, 1.0f);
-constexpr glm::vec3 INIT_POS_BALL = glm::vec3(1.0f, 1.0f, 1.0f);
+constexpr glm::vec3 INIT_POS_BALL = glm::vec3(0.0f, 0.0f, 0.0f);
 
 
 SDL_Window* g_display_window;
@@ -216,11 +217,11 @@ void process_input()
 
     if (key_state[SDL_SCANCODE_W])
     {
-        g_left_movement.x = -1.0f;
+        g_left_movement.y = 1.0f;
     }
     else if (key_state[SDL_SCANCODE_S])
     {
-        g_left_movement.x = 1.0f;
+        g_left_movement.y = -1.0f;
     }
 
     if (key_state[SDL_SCANCODE_UP])
