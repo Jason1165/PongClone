@@ -43,6 +43,13 @@ VIEWPORT_Y = 0,
 VIEWPORT_WIDTH = WINDOW_WIDTH,
 VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
+constexpr float SCALE_Y = 2.5f;
+constexpr float SCALE_X = SCALE_Y / 5;
+constexpr float INIT_X = 5.0f - (SCALE_X / 2);
+
+constexpr float UPPER_BOUND = 3.75f;
+constexpr float LOWER_BOUND = -UPPER_BOUND;
+
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 
@@ -55,12 +62,12 @@ constexpr char BALL_SPRITE_FILEPATH[] = "assets/leek_sword.png";
 
 constexpr float MINIMUM_COLLISION_DISTANCE = 1.0f;
 // leek sword is 1 to 5 ratio
-constexpr glm::vec3 INIT_SCALE_LEFT = glm::vec3(0.5f, 2.5f, 1.0f);
-constexpr glm::vec3 INIT_SCALE_RIGHT = glm::vec3(0.5f, 2.5f, 1.0f);
+constexpr glm::vec3 INIT_SCALE_LEFT = glm::vec3(SCALE_X, SCALE_Y, 1.0f);
+constexpr glm::vec3 INIT_SCALE_RIGHT = glm::vec3(SCALE_X, SCALE_Y, 1.0f);
 constexpr glm::vec3 INIT_SCALE_BALL = glm::vec3(1.0f, 1.0f, 1.0f);
 
-constexpr glm::vec3 INIT_POS_LEFT = glm::vec3(1.0f, 1.0f, 1.0f);
-constexpr glm::vec3 INIT_POS_RIGHT = glm::vec3(1.0f, 1.0f, 1.0f);
+constexpr glm::vec3 INIT_POS_LEFT = glm::vec3(-INIT_X, 0.0f, 1.0f);
+constexpr glm::vec3 INIT_POS_RIGHT = glm::vec3(INIT_X, 0.0f, 1.0f);
 constexpr glm::vec3 INIT_POS_BALL = glm::vec3(0.0f, 0.0f, 0.0f);
 
 
@@ -86,6 +93,7 @@ glm::vec3 g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
 glm::vec3 g_ball_movement = glm::vec3(0.0f, 0.0f, 0.0f);
 
 float g_ball_speed = 1.0f;  // move 1 unit per second
+float g_paddle_speed = 2.5f;
 
 void initialise();
 void process_input();
@@ -200,8 +208,8 @@ void process_input()
                 g_app_status = TERMINATED;
                 break;
             case SDLK_t:
-                // Change to single player mode
-                SINGLE_PLAYER = true;
+                // Toggle between modes
+                SINGLE_PLAYER = !SINGLE_PLAYER;
                 break;
             default:
                 break;
@@ -217,20 +225,23 @@ void process_input()
 
     if (key_state[SDL_SCANCODE_W])
     {
-        g_left_movement.y = 1.0f;
+        g_left_movement.y += 1.0f;
     }
-    else if (key_state[SDL_SCANCODE_S])
+    if (key_state[SDL_SCANCODE_S])
     {
-        g_left_movement.y = -1.0f;
+        g_left_movement.y += -1.0f;
     }
 
-    if (key_state[SDL_SCANCODE_UP])
+    if (!SINGLE_PLAYER) 
     {
-        g_right_movement.y = 1.0f;
-    }
-    else if (key_state[SDL_SCANCODE_DOWN])
-    {
-        g_right_movement.y = -1.0f;
+        if (key_state[SDL_SCANCODE_UP])
+        {
+            g_right_movement.y += 1.0f;
+        }
+        if (key_state[SDL_SCANCODE_DOWN])
+        {
+            g_right_movement.y += -1.0f;
+        }
     }
 
     // This makes sure that the player can't "cheat" their way into moving
@@ -252,18 +263,33 @@ void update()
     g_previous_ticks = ticks;
 
     // Add direction * units per second * elapsed time
-    g_left_position += g_left_movement * g_ball_speed * delta_time;
-    g_right_position += g_right_movement * g_ball_speed * delta_time;
+    g_left_position += g_left_movement * g_paddle_speed * delta_time;
+
+    if (g_left_position.y > UPPER_BOUND) {
+        g_left_position.y = UPPER_BOUND;
+    }
+    if (g_left_position.y < LOWER_BOUND) {
+        g_left_position.y = LOWER_BOUND;
+    }
 
     g_left_matrix = glm::mat4(1.0f);
     g_left_matrix = glm::translate(g_left_matrix, INIT_POS_LEFT);
     g_left_matrix = glm::translate(g_left_matrix, g_left_position);
+    g_left_matrix = glm::scale(g_left_matrix, INIT_SCALE_LEFT);
+
+
+    g_right_position += g_right_movement * g_paddle_speed * delta_time;
+
+    if (g_right_position.y > UPPER_BOUND) {
+        g_right_position.y = UPPER_BOUND;
+    }
+    if (g_right_position.y < LOWER_BOUND) {
+        g_right_position.y = LOWER_BOUND;
+    }
 
     g_right_matrix = glm::mat4(1.0f);
     g_right_matrix = glm::translate(g_right_matrix, INIT_POS_RIGHT);
     g_right_matrix = glm::translate(g_right_matrix, g_right_position);
-
-    g_left_matrix = glm::scale(g_left_matrix, INIT_SCALE_LEFT);
     g_right_matrix = glm::scale(g_right_matrix, INIT_SCALE_RIGHT);
 
     //float x_distance = fabs(g_shield_position.x + INIT_POS_SHIELD.x - INIT_POS_SWORD.x) -
