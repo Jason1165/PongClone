@@ -43,12 +43,15 @@ VIEWPORT_Y = 0,
 VIEWPORT_WIDTH = WINDOW_WIDTH,
 VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
+int END_STATE = 0;
+
 constexpr float SCALE_Y = 1.5f;
 constexpr float SCALE_X = SCALE_Y;
 constexpr float INIT_X = 5.0f - (SCALE_X / 2);
 
 constexpr float UPPER_BOUND = 3.5f;
 constexpr float LOWER_BOUND = -UPPER_BOUND;
+constexpr float WALL = 4.0f;
 
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
@@ -56,8 +59,8 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 bool SINGLE_PLAYER = false; // set default player mode to 2
 
-constexpr char LEFT_SPRITE_FILEPATH[] = "assets/cat.png";
-constexpr char RIGHT_SPRITE_FILEPATH[] = "assets/cat.png";
+constexpr char LEFT_SPRITE_FILEPATH[] = "assets/cat_left.png";
+constexpr char RIGHT_SPRITE_FILEPATH[] = "assets/cat_right.png";
 constexpr char BALL_SPRITE_FILEPATH[] = "assets/image.png";
 
 constexpr float MINIMUM_COLLISION_DISTANCE = 1.0f;
@@ -100,6 +103,9 @@ void process_input();
 void update();
 void render();
 void shutdown();
+
+// declarations cause c++
+void restart();
 
 constexpr GLint NUMBER_OF_TEXTURES = 1;  // to be generated, that is
 constexpr GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
@@ -215,14 +221,16 @@ void process_input()
                 SINGLE_PLAYER = !SINGLE_PLAYER;
                 break;
             case SDLK_r:
-                g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_ball_movement.x = 1.0f;
-                g_ball_movement.y = 0.0f;
-                g_ball_movement = glm::normalize(g_ball_movement);
+                restart();
                 break;
+
+            // extra stuff for testing
             case SDLK_b:
                 g_ball_movement = -g_ball_movement;
                 break;
+            // FASTER
+            case SDLK_f:
+                g_ball_speed += 1.0f;
             default:
                 break;
             }
@@ -266,6 +274,15 @@ void process_input()
     {
         g_right_movement = glm::normalize(g_right_movement);
     }
+}
+
+
+// function to restart so i can call call it multiple times
+void restart() {
+    g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
+    g_ball_movement.x = 1.0f;
+    g_ball_movement.y = 0.0f;
+    g_ball_movement = glm::normalize(g_ball_movement);
 }
 
 void update()
@@ -343,9 +360,20 @@ void update()
     }
 
     if (x_dist_right < 0.0f && y_dist_right < 0.0f) {
-        g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
         g_ball_movement = -g_ball_movement;
     }
+
+    if (g_ball_position.x > WALL) {
+        END_STATE = 1;
+        restart();
+    }
+
+    if (g_ball_position.x < -WALL) {
+        END_STATE = 2;
+        restart();
+    }
+
+
 
 }
 
