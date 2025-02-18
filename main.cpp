@@ -33,9 +33,9 @@ constexpr float WINDOW_SIZE_MULT = 1.0f;
 constexpr int WINDOW_WIDTH = 640 * WINDOW_SIZE_MULT,
 WINDOW_HEIGHT = 480 * WINDOW_SIZE_MULT;
 
-constexpr float BG_RED = 0.9765625f,
-BG_GREEN = 0.97265625f,
-BG_BLUE = 0.9609375f,
+constexpr float BG_RED = 0.25f,
+BG_GREEN = 0.25f,
+BG_BLUE = 0.25f,
 BG_OPACITY = 1.0f;
 
 constexpr int VIEWPORT_X = 0,
@@ -43,11 +43,11 @@ VIEWPORT_Y = 0,
 VIEWPORT_WIDTH = WINDOW_WIDTH,
 VIEWPORT_HEIGHT = WINDOW_HEIGHT;
 
-constexpr float SCALE_Y = 2.5f;
-constexpr float SCALE_X = SCALE_Y / 5;
+constexpr float SCALE_Y = 1.5f;
+constexpr float SCALE_X = SCALE_Y;
 constexpr float INIT_X = 5.0f - (SCALE_X / 2);
 
-constexpr float UPPER_BOUND = 3.75f;
+constexpr float UPPER_BOUND = 3.5f;
 constexpr float LOWER_BOUND = -UPPER_BOUND;
 
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
@@ -56,15 +56,15 @@ F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 bool SINGLE_PLAYER = false; // set default player mode to 2
 
-constexpr char LEFT_SPRITE_FILEPATH[] = "assets/leek_sword.png";
-constexpr char RIGHT_SPRITE_FILEPATH[] = "assets/leek_sword.png";
-constexpr char BALL_SPRITE_FILEPATH[] = "assets/leek_sword.png";
+constexpr char LEFT_SPRITE_FILEPATH[] = "assets/cat.png";
+constexpr char RIGHT_SPRITE_FILEPATH[] = "assets/cat.png";
+constexpr char BALL_SPRITE_FILEPATH[] = "assets/image.png";
 
 constexpr float MINIMUM_COLLISION_DISTANCE = 1.0f;
 // leek sword is 1 to 5 ratio
 constexpr glm::vec3 INIT_SCALE_LEFT = glm::vec3(SCALE_X, SCALE_Y, 1.0f);
 constexpr glm::vec3 INIT_SCALE_RIGHT = glm::vec3(SCALE_X, SCALE_Y, 1.0f);
-constexpr glm::vec3 INIT_SCALE_BALL = glm::vec3(1.0f, 1.0f, 1.0f);
+constexpr glm::vec3 INIT_SCALE_BALL = glm::vec3(0.5f, 0.5f, 1.0f);
 
 constexpr glm::vec3 INIT_POS_LEFT = glm::vec3(-INIT_X, 0.0f, 1.0f);
 constexpr glm::vec3 INIT_POS_RIGHT = glm::vec3(INIT_X, 0.0f, 1.0f);
@@ -161,9 +161,6 @@ void initialise()
     g_right_matrix = glm::mat4(1.0f);
     g_ball_matrix = glm::mat4(1.0f);
 
-    //g_sword_matrix = glm::translate(g_sword_matrix, glm::vec3(1.0f, 1.0f, 0.0f));
-    //g_sword_position += g_sword_movement;
-
     g_view_matrix = glm::mat4(1.0f);
     g_projection_matrix = glm::ortho(-5.0f, 5.0f, -3.75f, 3.75f, -1.0f, 1.0f);
 
@@ -177,6 +174,12 @@ void initialise()
     g_left_texture_id = load_texture(LEFT_SPRITE_FILEPATH);
     g_right_texture_id = load_texture(RIGHT_SPRITE_FILEPATH);
     g_ball_texture_id = load_texture(BALL_SPRITE_FILEPATH);
+
+
+    // initial ball movement
+    g_ball_movement.x = 1.0f;
+    g_ball_movement.y = 1.0f;
+    g_ball_movement = glm::normalize(g_ball_movement);
 
     // enable blending
     glEnable(GL_BLEND);
@@ -210,6 +213,15 @@ void process_input()
             case SDLK_t:
                 // Toggle between modes
                 SINGLE_PLAYER = !SINGLE_PLAYER;
+                break;
+            case SDLK_r:
+                g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
+                g_ball_movement.x = 1.0f;
+                g_ball_movement.y = 0.0f;
+                g_ball_movement = glm::normalize(g_ball_movement);
+                break;
+            case SDLK_b:
+                g_ball_movement = -g_ball_movement;
                 break;
             default:
                 break;
@@ -292,16 +304,49 @@ void update()
     g_right_matrix = glm::translate(g_right_matrix, g_right_position);
     g_right_matrix = glm::scale(g_right_matrix, INIT_SCALE_RIGHT);
 
-    //float x_distance = fabs(g_shield_position.x + INIT_POS_SHIELD.x - INIT_POS_SWORD.x) -
-    //    ((INIT_SCALE_SWORD.x + INIT_SCALE_SHIELD.x) / 2.0f);
 
-    //float y_distance = fabs(g_shield_position.y + INIT_POS_SHIELD.y - INIT_POS_SWORD.y) -
-    //    ((INIT_SCALE_SWORD.y + INIT_SCALE_SHIELD.y) / 2.0f);
+    g_ball_position += g_ball_movement * g_ball_speed * delta_time;
 
-    //if (x_distance < 0.0f && y_distance < 0.0f)
-    //{
-    //    std::cout << std::time(nullptr) << ": Collision.\n";
-    //}
+    if (g_ball_position.y > UPPER_BOUND) 
+    {
+        g_ball_position.y = UPPER_BOUND;
+        g_ball_movement.y = -g_ball_movement.y;
+    }
+    if (g_ball_position.y < LOWER_BOUND) 
+    {
+        g_ball_position.y = LOWER_BOUND;
+        g_ball_movement.y = -g_ball_movement.y;
+    }
+
+    g_ball_matrix = glm::mat4(1.0f);
+    g_ball_matrix = glm::translate(g_ball_matrix, INIT_POS_BALL);
+    g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
+    g_ball_matrix = glm::scale(g_ball_matrix, INIT_SCALE_BALL);
+
+    float ball_x = g_ball_position.x + INIT_POS_BALL.x;
+    float ball_y = g_ball_position.y + INIT_POS_BALL.y;
+
+    float left_x = g_left_position.x + INIT_POS_LEFT.x;
+    float left_y = g_left_position.y + INIT_POS_LEFT.y;
+
+    float right_x = g_right_position.x + INIT_POS_RIGHT.x;
+    float right_y = g_right_position.y + INIT_POS_RIGHT.y;
+
+    float x_dist_left = fabs(ball_x - left_x) - ((INIT_SCALE_BALL.x + INIT_SCALE_LEFT.x) / 2.0f);
+    float y_dist_left = fabs(ball_y - left_y) - ((INIT_SCALE_BALL.y + INIT_SCALE_LEFT.y) / 2.0f);
+
+    float x_dist_right = fabs(ball_x - right_x) - ((INIT_SCALE_BALL.x + INIT_SCALE_RIGHT.x) / 2.0f);
+    float y_dist_right = fabs(ball_y - right_y) - ((INIT_SCALE_BALL.y + INIT_SCALE_RIGHT.y) / 2.0f);
+
+    if (x_dist_left < 0.0f && y_dist_left < 0.0f) {
+        g_ball_movement = -g_ball_movement;
+    }
+
+    if (x_dist_right < 0.0f && y_dist_right < 0.0f) {
+        g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
+        g_ball_movement = -g_ball_movement;
+    }
+
 }
 
 void draw_object(glm::mat4& object_model_matrix, GLuint& object_texture_id)
@@ -335,7 +380,7 @@ void render() {
     // Bind texture
     draw_object(g_left_matrix, g_left_texture_id);
     draw_object(g_right_matrix, g_right_texture_id);
-    //draw_object(g_ball_matrix, g_ball_texture_id);
+    draw_object(g_ball_matrix, g_ball_texture_id);
 
     // We disable two attribute arrays now
     glDisableVertexAttribArray(g_shader_program.get_position_attribute());
