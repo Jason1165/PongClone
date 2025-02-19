@@ -111,7 +111,7 @@ void shutdown();
 
 // declarations cause c++
 void restart();
-void coord(glm::vec3&);
+bool check_collision(glm::vec3& ball_pos, const glm::vec3& ball_init, const glm::vec3& ball_scale, glm::vec3& paddle_pos, const glm::vec3& paddle_init, const glm::vec3& paddle_scale);
 
 constexpr GLint NUMBER_OF_TEXTURES = 1;  // to be generated, that is
 constexpr GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
@@ -295,12 +295,21 @@ void restart() {
     g_ball_movement.y = float(rand() % 101) - 50;
     g_ball_movement = glm::normalize(g_ball_movement);
     GAME_STATE = 0;
-    std::cout << "g_ball_movement ";
-    coord(g_ball_movement);
 }
 
-void coord(glm::vec3& values) {
-    std::cout << "X: " << values.x << " Y: " << values.y << std::endl;
+
+bool check_collision(glm::vec3& ball_pos, const glm::vec3& ball_init, const glm::vec3& ball_scale, glm::vec3& paddle_pos, const glm::vec3& paddle_init, const glm::vec3& paddle_scale)
+{
+    float ball_x = ball_pos.x + ball_init.x;
+    float ball_y = ball_pos.y + ball_init.y;
+
+    float paddle_x = paddle_pos.x + paddle_init.x;
+    float paddle_y = paddle_pos.y + paddle_init.y;
+
+    float dist_x = fabs(ball_x - paddle_x) - ((ball_scale.x + paddle_scale.x) / 2.0f);
+    float dist_y = fabs(ball_y - paddle_y) - ((ball_scale.y + paddle_scale.y) / 2.0f);
+
+    return (dist_x < 0.0f && dist_y < 0.0f);
 }
 
 void update()
@@ -346,7 +355,12 @@ void update()
         g_left_matrix = glm::scale(g_left_matrix, INIT_SCALE_LEFT);
 
         if (SINGLE_PLAYER) {
-            g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            //LOG(g_right_position.x - g_ball_position.x);
+            LOG(g_ball_position.x);
+            if (g_ball_position.x > 2.0f) 
+            {
+                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
         }
 
         g_right_position += g_right_movement * g_paddle_speed * delta_time;
@@ -363,48 +377,32 @@ void update()
         g_right_matrix = glm::translate(g_right_matrix, g_right_position);
         g_right_matrix = glm::scale(g_right_matrix, INIT_SCALE_RIGHT);
 
-        float ball_x = g_ball_position.x + INIT_POS_BALL.x;
-        float ball_y = g_ball_position.y + INIT_POS_BALL.y;
+        bool hit_left = check_collision(g_ball_position, INIT_POS_BALL, INIT_SCALE_BALL, g_left_position, INIT_POS_LEFT, INIT_SCALE_LEFT);
+        bool hit_right = check_collision(g_ball_position, INIT_POS_BALL, INIT_SCALE_BALL, g_right_position, INIT_POS_RIGHT, INIT_SCALE_RIGHT);
 
-        float left_x = g_left_position.x + INIT_POS_LEFT.x;
-        float left_y = g_left_position.y + INIT_POS_LEFT.y;
 
-        float right_x = g_right_position.x + INIT_POS_RIGHT.x;
-        float right_y = g_right_position.y + INIT_POS_RIGHT.y;
-
-        float x_dist_left = fabs(ball_x - left_x) - ((INIT_SCALE_BALL.x + INIT_SCALE_LEFT.x) / 2.0f);
-        float y_dist_left = fabs(ball_y - left_y) - ((INIT_SCALE_BALL.y + INIT_SCALE_LEFT.y) / 2.0f);
-
-        float x_dist_right = fabs(ball_x - right_x) - ((INIT_SCALE_BALL.x + INIT_SCALE_RIGHT.x) / 2.0f);
-        float y_dist_right = fabs(ball_y - right_y) - ((INIT_SCALE_BALL.y + INIT_SCALE_RIGHT.y) / 2.0f);
-
-        if (x_dist_left < 0.0f && y_dist_left < 0.0f) 
+        if (hit_left) 
         {
             g_ball_movement = -g_ball_movement;
         }
-
-        if (x_dist_right < 0.0f && y_dist_right < 0.0f) 
+        else if (hit_right) 
         {
             g_ball_movement = -g_ball_movement;
         }
-
-        if (g_ball_position.x > WALL) 
+        else if (g_ball_position.x > WALL) 
         {
             GAME_STATE = 1;
         }
-
-        if (g_ball_position.x < -WALL) {
+        else if (g_ball_position.x < -WALL) {
             GAME_STATE = 2;
         }
     }
-    else if (GAME_STATE != 0) 
+    else
     {
         g_win_matrix = glm::mat4(1.0f);
         g_win_matrix = glm::translate(g_win_matrix, INIT_POS_WIN);
         g_win_matrix = glm::scale(g_win_matrix, INIT_SCALE_WIN);
     }
-
-
 
 }
 
