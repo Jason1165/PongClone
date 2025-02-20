@@ -28,7 +28,7 @@
 
 enum AppStatus { RUNNING, TERMINATED };
 
-constexpr float WINDOW_SIZE_MULT = 2.0f;
+constexpr float WINDOW_SIZE_MULT = 1.0f;
 
 constexpr int WINDOW_WIDTH = 640 * WINDOW_SIZE_MULT,
 WINDOW_HEIGHT = 480 * WINDOW_SIZE_MULT;
@@ -52,14 +52,14 @@ constexpr float SCALE_Y = 1.5f,
 constexpr float UPPER_BOUND = 3.5f,
                 LOWER_BOUND = -UPPER_BOUND,
                 WALL = INIT_X,
-                SPEED_INC = 0.005f;
+                SPEED_INC = 0.005f,
+                START_AI = 0.0f;
 
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
 
 constexpr float MILLISECONDS_IN_SECOND = 1000.0;
 bool SINGLE_PLAYER = false; // set default player mode to 2
-bool BOT_MODE = false;
 
 constexpr char LEFT_SPRITE_FILEPATH[] = "assets/cat_left.png",
                RIGHT_SPRITE_FILEPATH[] = "assets/cat_right.png",
@@ -277,9 +277,6 @@ void process_input()
             case SDLK_f:
                 g_ball_speed += 1.0f;
                 break;
-            case SDLK_y:
-                BOT_MODE = !BOT_MODE;
-                break;
             default:
                 break;
             }
@@ -373,9 +370,6 @@ void update()
     float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
     g_previous_ticks = ticks;
 
-    //g_ball_movement.x = 1.0f;
-    //g_ball_movement.y = 0.0f;
-
     // if not end screen
     if (GAME_STATE == 0)
     {    
@@ -437,23 +431,32 @@ void update()
             g_ball_matrix3 = glm::scale(g_ball_matrix3, INIT_SCALE_BALL);
         }
 
-        // if t was pressed or BOT_MODE for testing purposes
-        if (SINGLE_PLAYER || BOT_MODE) {
-            if (g_ball_position.x > 0.0f && g_ball_movement.x > 0.0f)
+        // if t was pressed 
+        if (SINGLE_PLAYER) {
+
+            if (NUM_BALLS == 1 && g_ball_position.x > START_AI && g_ball_movement.x > 0.0f) 
             {
                 g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
             }
-            else if (NUM_BALLS >= 2 && g_ball_position2.x > 0.0f && g_ball_movement2.x > 0.0f)
+            else if (NUM_BALLS == 2 && g_ball_movement.x > 0.0f && g_ball_position.x > START_AI && g_ball_position.x > g_ball_position2.x)
+            {
+                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
+            else if (NUM_BALLS == 2 && g_ball_movement2.x > 0.0f && g_ball_position2.x > START_AI)
             {
                 g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
             }
-            else if (NUM_BALLS >= 3 && g_ball_position3.x > 0.0f && g_ball_movement3.x > 0.0f)
+            else if (NUM_BALLS == 3 && g_ball_movement.x > 0.0f && g_ball_position.x > START_AI && g_ball_position.x > g_ball_position2.x && g_ball_position.x > g_ball_position3.x) 
+            {
+                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
+            else if (NUM_BALLS == 3 && g_ball_movement2.x > 0.0f && g_ball_position2.x > START_AI && g_ball_position2.x > g_ball_position.x && g_ball_position2.x > g_ball_position3.x) 
+            {
+                g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
+            else if (NUM_BALLS == 3 && g_ball_movement3.x > 0.0f && g_ball_position3.x > START_AI && g_ball_position3.x > g_ball_position2.x && g_ball_position3.x > g_ball_position.x) 
             {
                 g_right_movement.y = ((g_ball_position3.y > g_right_position.y) ? 1.0f : -1.0f);
-            }
-            // for debug purposes cause im lazy and the bots can play themselves
-            if (BOT_MODE) { 
-                g_left_movement.y = ((g_ball_position.y > g_left_position.y) ? 1.0f : -1.0f); 
             }
         }
 
@@ -461,10 +464,12 @@ void update()
         g_left_position += g_left_movement * g_paddle_speed * delta_time;
 
         // prevent paddle from going out of bounds
-        if (g_left_position.y > UPPER_BOUND) {
+        if (g_left_position.y > UPPER_BOUND) 
+        {
             g_left_position.y = UPPER_BOUND;
         }
-        if (g_left_position.y < LOWER_BOUND) {
+        if (g_left_position.y < LOWER_BOUND) 
+        {
             g_left_position.y = LOWER_BOUND;
         }
 
