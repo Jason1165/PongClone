@@ -122,6 +122,8 @@ void shutdown();
 // declarations cause c++
 void restart();
 bool check_collision(glm::vec3& ball_pos, const glm::vec3& ball_init, const glm::vec3& ball_scale, glm::vec3& paddle_pos, const glm::vec3& paddle_init, const glm::vec3& paddle_scale);
+void updateBall(glm::vec3& ball_pos, glm::vec3& ball_move);
+
 
 constexpr GLint NUMBER_OF_TEXTURES = 1;  // to be generated, that is
 constexpr GLint LEVEL_OF_DETAIL = 0;  // base image level; Level n is the nth mipmap reduction image
@@ -204,7 +206,7 @@ void initialise()
 
 
     // initial ball movement
-    srand(std::time(nullptr)); // seed with random to ensure randomness
+    srand(unsigned int(std::time(nullptr))); // seed with random to ensure randomness
     restart();
 
     // enable blending
@@ -244,9 +246,21 @@ void process_input()
                 NUM_BALLS = 1;
                 break;
             case SDLK_2:
+                if (NUM_BALLS == 1) // if only one ball, create another
+                {
+                    updateBall(g_ball_position2, g_ball_movement2);
+                }
                 NUM_BALLS = 2;
                 break;
             case SDLK_3:
+                if (NUM_BALLS != 3) // if not three balls create the third
+                {
+                    updateBall(g_ball_position3, g_ball_movement3);
+                }
+                if (NUM_BALLS == 1) // if only one ball create the second as well
+                {
+                    updateBall(g_ball_position2, g_ball_movement2);
+                }
                 NUM_BALLS = 3;
                 break;
 
@@ -312,17 +326,24 @@ void process_input()
 
 // function to restart so i can call call it multiple times
 void restart() {
-    g_ball_position = glm::vec3(0.0f, 0.0f, 0.0f);
-    g_ball_movement.x = float(rand() % 101) - 50;
-    g_ball_movement.y = float(rand() % 101) - 50;
-    g_ball_movement = glm::normalize(g_ball_movement);
+    updateBall(g_ball_position, g_ball_movement);
+    updateBall(g_ball_position2, g_ball_movement2);
+    updateBall(g_ball_position3, g_ball_movement3);
+
     g_ball_speed = 1.0f;
     g_win_size = glm::vec3(1.0f, 1.0f, 0.0f);
-    if (fabs(g_ball_movement.x < 0.1f || g_ball_movement.y < 0.1f)) { restart(); }
     GAME_STATE = 0;
     NUM_BALLS = 1;
 }
 
+void updateBall(glm::vec3& ball_pos, glm::vec3& ball_move) 
+{
+    ball_pos = glm::vec3(0.0f);
+    ball_move.x = float(rand() % 101) - 50;
+    ball_move.y = float(rand() % 101) - 50;
+    ball_move = glm::normalize(ball_move);
+    if (ball_move.x < 0.1f || ball_move.y < 0.1f) { updateBall(ball_pos, ball_move); }
+}
 
 bool check_collision(glm::vec3& ball_pos, const glm::vec3& ball_init, const glm::vec3& ball_scale, glm::vec3& paddle_pos, const glm::vec3& paddle_init, const glm::vec3& paddle_scale)
 {
@@ -336,14 +357,8 @@ bool check_collision(glm::vec3& ball_pos, const glm::vec3& ball_init, const glm:
     float dist_y = fabs(ball_y - paddle_y) - ((ball_scale.y + paddle_scale.y) / 2.0f);
 
     bool front = fabs(ball_x) < fabs(paddle_x);
-
-    //if (dist_x < 0.0f && dist_y < 0.0f) { 
-    //    std::cout << "Distances X:" << g_previous_ticks << " " << dist_x << " Y:" << dist_y << " " << std::endl;
-    //    std::cout << "Velocities X:" << g_ball_movement.x << " Y:" << g_ball_movement.y << std::endl;
-    //    std::cout << std::endl;
-    //}
     
-    // extra condition so edge hits don't count and to prevent weird bugs
+    // extra condition so top/bottom hits don't count and to prevent weird bugs
     return (dist_x < 0.0f && dist_y < 0.0f && fabs(dist_x) < 0.1f);
 }
 
@@ -375,49 +390,63 @@ void update()
         g_ball_matrix = glm::scale(g_ball_matrix, INIT_SCALE_BALL);
 
         /*------------BALL TWO------------*/
-        g_ball_position2 += g_ball_movement2 * g_ball_speed * delta_time;
-        // bouncing off top and bottom
-        if (g_ball_position2.y > UPPER_BOUND)
-        {
-            g_ball_position2.y = UPPER_BOUND;
-            g_ball_movement2.y = -g_ball_movement2.y;
+        if (NUM_BALLS >= 2) {
+            g_ball_position2 += g_ball_movement2 * g_ball_speed * delta_time;
+            // bouncing off top and bottom
+            if (g_ball_position2.y > UPPER_BOUND)
+            {
+                g_ball_position2.y = UPPER_BOUND;
+                g_ball_movement2.y = -g_ball_movement2.y;
+            }
+            if (g_ball_position2.y < LOWER_BOUND)
+            {
+                g_ball_position2.y = LOWER_BOUND;
+                g_ball_movement2.y = -g_ball_movement2.y;
+            }
+            g_ball_matrix2 = glm::mat4(1.0f);
+            g_ball_matrix2 = glm::translate(g_ball_matrix2, INIT_POS_BALL);
+            g_ball_matrix2 = glm::translate(g_ball_matrix2, g_ball_position2);
+            g_ball_matrix2 = glm::scale(g_ball_matrix2, INIT_SCALE_BALL);
         }
-        if (g_ball_position2.y < LOWER_BOUND)
-        {
-            g_ball_position2.y = LOWER_BOUND;
-            g_ball_movement2.y = -g_ball_movement2.y;
-        }
-        g_ball_matrix2 = glm::mat4(1.0f);
-        g_ball_matrix2 = glm::translate(g_ball_matrix2, INIT_POS_BALL);
-        g_ball_matrix2 = glm::translate(g_ball_matrix2, g_ball_position2);
-        g_ball_matrix2 = glm::scale(g_ball_matrix2, INIT_SCALE_BALL);
 
         /*------------BALL THREE------------*/
-        g_ball_position3 += g_ball_movement3 * g_ball_speed * delta_time;
-        // bouncing off top and bottom
-        if (g_ball_position3.y > UPPER_BOUND)
-        {
-            g_ball_position3.y = UPPER_BOUND;
-            g_ball_movement3.y = -g_ball_movement3.y;
+        if (NUM_BALLS >= 3) {
+            g_ball_position3 += g_ball_movement3 * g_ball_speed * delta_time;
+            // bouncing off top and bottom
+            if (g_ball_position3.y > UPPER_BOUND)
+            {
+                g_ball_position3.y = UPPER_BOUND;
+                g_ball_movement3.y = -g_ball_movement3.y;
+            }
+            if (g_ball_position3.y < LOWER_BOUND)
+            {
+                g_ball_position3.y = LOWER_BOUND;
+                g_ball_movement3.y = -g_ball_movement3.y;
+            }
+            g_ball_matrix3 = glm::mat4(1.0f);
+            g_ball_matrix3 = glm::translate(g_ball_matrix3, INIT_POS_BALL);
+            g_ball_matrix3 = glm::translate(g_ball_matrix3, g_ball_position3);
+            g_ball_matrix3 = glm::scale(g_ball_matrix3, INIT_SCALE_BALL);
         }
-        if (g_ball_position3.y < LOWER_BOUND)
-        {
-            g_ball_position3.y = LOWER_BOUND;
-            g_ball_movement3.y = -g_ball_movement3.y;
-        }
-        g_ball_matrix3 = glm::mat4(1.0f);
-        g_ball_matrix3 = glm::translate(g_ball_matrix3, INIT_POS_BALL);
-        g_ball_matrix3 = glm::translate(g_ball_matrix3, g_ball_position3);
-        g_ball_matrix3 = glm::scale(g_ball_matrix3, INIT_SCALE_BALL);
 
         // if t was pressed or BOT_MODE for testing purposes
         if (SINGLE_PLAYER || BOT_MODE) {
-            if (g_ball_position.x > 0.0f)
+            if (g_ball_position.x > 0.0f && g_ball_movement.x > 0.0f)
             {
                 g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
             }
+            else if (NUM_BALLS >= 2 && g_ball_position2.x > 0.0f && g_ball_movement2.x > 0.0f)
+            {
+                g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
+            else if (NUM_BALLS >= 3 && g_ball_position3.x > 0.0f && g_ball_movement3.x > 0.0f)
+            {
+                g_right_movement.y = ((g_ball_position3.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
             // for debug purposes cause im lazy and the bots can play themselves
-            if (BOT_MODE) { g_left_movement.y = ((g_ball_position.y > g_left_position.y) ? 1.0f : -1.0f); }
+            if (BOT_MODE) { 
+                g_left_movement.y = ((g_ball_position.y > g_left_position.y) ? 1.0f : -1.0f); 
+            }
         }
 
         // Add direction * units per second * elapsed time
@@ -456,17 +485,33 @@ void update()
         // check collision
         bool hit_left = check_collision(g_ball_position, INIT_POS_BALL, INIT_SCALE_BALL, g_left_position, INIT_POS_LEFT, INIT_SCALE_LEFT);
         bool hit_right = check_collision(g_ball_position, INIT_POS_BALL, INIT_SCALE_BALL, g_right_position, INIT_POS_RIGHT, INIT_SCALE_RIGHT);
+       
+        bool hit_left2 = check_collision(g_ball_position2, INIT_POS_BALL, INIT_SCALE_BALL, g_left_position, INIT_POS_LEFT, INIT_SCALE_LEFT);
+        bool hit_right2 = check_collision(g_ball_position2, INIT_POS_BALL, INIT_SCALE_BALL, g_right_position, INIT_POS_RIGHT, INIT_SCALE_RIGHT);
+
+        bool hit_left3 = check_collision(g_ball_position3, INIT_POS_BALL, INIT_SCALE_BALL, g_left_position, INIT_POS_LEFT, INIT_SCALE_LEFT);
+        bool hit_right3 = check_collision(g_ball_position3, INIT_POS_BALL, INIT_SCALE_BALL, g_right_position, INIT_POS_RIGHT, INIT_SCALE_RIGHT);
+
 
         // update state of game
         if (hit_left || hit_right) 
         {
             g_ball_movement.x = (g_ball_movement.x > 0) ? -(g_ball_movement.x + SPEED_INC) : -(g_ball_movement.x - SPEED_INC);
         }
-        else if (g_ball_position.x > WALL) 
+        if (NUM_BALLS >= 2 && (hit_left2 || hit_right2)) 
+        {
+            g_ball_movement2.x = (g_ball_movement2.x > 0) ? -(g_ball_movement2.x + SPEED_INC) : -(g_ball_movement2.x - SPEED_INC);
+        }
+        if (NUM_BALLS >= 3 && (hit_left3 || hit_right3)) 
+        {
+            g_ball_movement3.x = (g_ball_movement3.x > 0) ? -(g_ball_movement3.x + SPEED_INC) : -(g_ball_movement3.x - SPEED_INC);
+        }
+
+        if (g_ball_position.x > WALL || g_ball_position2.x > WALL || g_ball_position3.x > WALL)  
         {
             GAME_STATE = 1;
         }
-        else if (g_ball_position.x < -WALL) {
+        if (g_ball_position.x < -WALL || g_ball_position2.x < -WALL || g_ball_position3.x < -WALL) {
             GAME_STATE = 2;
         }
     }
