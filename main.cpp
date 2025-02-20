@@ -51,7 +51,8 @@ constexpr float SCALE_Y = 1.5f,
 
 constexpr float UPPER_BOUND = 3.5f,
                 LOWER_BOUND = -UPPER_BOUND,
-                WALL = 4.0f;
+                WALL = INIT_X,
+                SPEED_INC = 0.005f;
 
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
@@ -233,9 +234,6 @@ void process_input()
                 break;
 
             // extra stuff for testing
-            case SDLK_b:
-                g_ball_movement = -g_ball_movement;
-                break;
             // FASTER
             case SDLK_f:
                 g_ball_speed += 1.0f;
@@ -294,6 +292,8 @@ void restart() {
     g_ball_movement.x = float(rand() % 101) - 50;
     g_ball_movement.y = float(rand() % 101) - 50;
     g_ball_movement = glm::normalize(g_ball_movement);
+    g_ball_speed = 1.0f;
+    if (fabs(g_ball_movement.x < 0.1f || g_ball_movement.y < 0.1f)) { restart(); }
     GAME_STATE = 0;
 }
 
@@ -309,7 +309,16 @@ bool check_collision(glm::vec3& ball_pos, const glm::vec3& ball_init, const glm:
     float dist_x = fabs(ball_x - paddle_x) - ((ball_scale.x + paddle_scale.x) / 2.0f);
     float dist_y = fabs(ball_y - paddle_y) - ((ball_scale.y + paddle_scale.y) / 2.0f);
 
-    return (dist_x < 0.0f && dist_y < 0.0f);
+    bool front = fabs(ball_x) < fabs(paddle_x);
+
+    //if (dist_x < 0.0f && dist_y < 0.0f) { 
+    //    std::cout << "Distances " << g_previous_ticks << " " << dist_x << " " << dist_y << " " << std::endl;
+    //    std::cout << "Velocities " << g_ball_movement.x << " " << g_ball_movement.y << std::endl;
+    //    std::cout << std::endl;
+    //}
+    
+    // extra condition so edge hits don't count and to prevent weird bugs
+    return (dist_x < 0.0f && dist_y < 0.0f && fabs(dist_x) < 0.1f);
 }
 
 void update()
@@ -322,6 +331,7 @@ void update()
     {    
         g_ball_position += g_ball_movement * g_ball_speed * delta_time;
 
+        // wall bounces
         if (g_ball_position.y > UPPER_BOUND)
         {
             g_ball_position.y = UPPER_BOUND;
@@ -338,6 +348,14 @@ void update()
         g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
         g_ball_matrix = glm::scale(g_ball_matrix, INIT_SCALE_BALL);
 
+        if (SINGLE_PLAYER) {
+            if (g_ball_position.x > 0.0f)
+            {
+                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            }
+            // for debug purposes cause im lazy and the bots can play themselves
+            g_left_movement.y = ((g_ball_position.y > g_left_position.y) ? 1.0f : -1.0f);
+        }
 
         // Add direction * units per second * elapsed time
         g_left_position += g_left_movement * g_paddle_speed * delta_time;
@@ -354,14 +372,6 @@ void update()
         g_left_matrix = glm::translate(g_left_matrix, g_left_position);
         g_left_matrix = glm::scale(g_left_matrix, INIT_SCALE_LEFT);
 
-        if (SINGLE_PLAYER) {
-            //LOG(g_right_position.x - g_ball_position.x);
-            LOG(g_ball_position.x);
-            if (g_ball_position.x > 2.0f) 
-            {
-                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
-            }
-        }
 
         g_right_position += g_right_movement * g_paddle_speed * delta_time;
 
@@ -381,13 +391,9 @@ void update()
         bool hit_right = check_collision(g_ball_position, INIT_POS_BALL, INIT_SCALE_BALL, g_right_position, INIT_POS_RIGHT, INIT_SCALE_RIGHT);
 
 
-        if (hit_left) 
+        if (hit_left || hit_right) 
         {
-            g_ball_movement = -g_ball_movement;
-        }
-        else if (hit_right) 
-        {
-            g_ball_movement = -g_ball_movement;
+            g_ball_movement.x = (g_ball_movement.x > 0) ? -(g_ball_movement.x + SPEED_INC) : -(g_ball_movement.x - SPEED_INC);
         }
         else if (g_ball_position.x > WALL) 
         {
