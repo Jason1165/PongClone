@@ -28,7 +28,7 @@
 
 enum AppStatus { RUNNING, TERMINATED };
 
-constexpr float WINDOW_SIZE_MULT = 1.0f;
+constexpr float WINDOW_SIZE_MULT = 2.0f;
 
 constexpr int WINDOW_WIDTH = 640 * WINDOW_SIZE_MULT,
 WINDOW_HEIGHT = 480 * WINDOW_SIZE_MULT;
@@ -63,7 +63,9 @@ bool BOT_MODE = false;
 
 constexpr char LEFT_SPRITE_FILEPATH[] = "assets/cat_left.png",
                RIGHT_SPRITE_FILEPATH[] = "assets/cat_right.png",
-               BALL_SPRITE_FILEPATH[] = "assets/image.png",
+               BALL_SPRITE_FILEPATH[] = "assets/ball.png",
+               BALL2_SPRITE_FILEPATH[] = "assets/ball2.png",
+               BALL3_SPRITE_FILEPATH[] = "assets/ball3.png",
                P1_SPRITE_FILEPATH[] = "assets/p1_win.png",
                P2_SPRITE_FILEPATH[] = "assets/p2_win.png";
 
@@ -91,6 +93,8 @@ float g_previous_ticks = 0.0f;
 GLuint g_left_texture_id,
        g_right_texture_id,
        g_ball_texture_id,
+       g_ball_texture_id2,
+       g_ball_texture_id3,
        g_p1_texture_id,
        g_p2_texture_id;
 
@@ -201,9 +205,10 @@ void initialise()
     g_left_texture_id = load_texture(LEFT_SPRITE_FILEPATH);
     g_right_texture_id = load_texture(RIGHT_SPRITE_FILEPATH);
     g_ball_texture_id = load_texture(BALL_SPRITE_FILEPATH);
+    g_ball_texture_id2 = load_texture(BALL2_SPRITE_FILEPATH);
+    g_ball_texture_id3 = load_texture(BALL3_SPRITE_FILEPATH);
     g_p1_texture_id = load_texture(P1_SPRITE_FILEPATH);
     g_p2_texture_id = load_texture(P2_SPRITE_FILEPATH);
-
 
     // initial ball movement
     srand(unsigned int(std::time(nullptr))); // seed with random to ensure randomness
@@ -367,6 +372,9 @@ void update()
     float ticks = (float)SDL_GetTicks() / MILLISECONDS_IN_SECOND; // get the current number of ticks
     float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
     g_previous_ticks = ticks;
+
+    //g_ball_movement.x = 1.0f;
+    //g_ball_movement.y = 0.0f;
 
     // if not end screen
     if (GAME_STATE == 0)
@@ -570,8 +578,8 @@ void render() {
         draw_object(g_left_matrix, g_left_texture_id);
         draw_object(g_right_matrix, g_right_texture_id);
         draw_object(g_ball_matrix, g_ball_texture_id);
-        if (NUM_BALLS >= 2) { draw_object(g_ball_matrix2, g_ball_texture_id); }
-        if (NUM_BALLS >= 3) { draw_object(g_ball_matrix3, g_ball_texture_id); }
+        if (NUM_BALLS >= 2) { draw_object(g_ball_matrix2, g_ball_texture_id2); }
+        if (NUM_BALLS >= 3) { draw_object(g_ball_matrix3, g_ball_texture_id3); }
     }
     else if (GAME_STATE == 1)
     {
