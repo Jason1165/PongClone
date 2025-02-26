@@ -52,8 +52,8 @@ constexpr float SCALE_Y = 1.5f,
 constexpr float UPPER_BOUND = 3.5f,
                 LOWER_BOUND = -UPPER_BOUND,
                 WALL = INIT_X,
-                SPEED_INC = 0.005f,
-                START_AI = 0.0f;
+                SPEED_INC = 0.000f, // turned off cause bugs with collision
+                START_AI = -1.0f;
 
 constexpr char V_SHADER_PATH[] = "shaders/vertex_textured.glsl",
 F_SHADER_PATH[] = "shaders/fragment_textured.glsl";
@@ -80,6 +80,9 @@ constexpr glm::vec3 INIT_POS_LEFT = glm::vec3(-INIT_X, 0.0f, 1.0f),
                     INIT_POS_RIGHT = glm::vec3(INIT_X, 0.0f, 1.0f),
                     INIT_POS_BALL = glm::vec3(0.0f, 0.0f, 0.0f),
                     INIT_POS_WIN = glm::vec3(0.0f, 0.0f, 0.0f);
+
+float g_angle = 0.0f;    // current angle
+float ROT_SPEED = 300.0f;
 
 
 SDL_Window* g_display_window;
@@ -113,8 +116,9 @@ glm::vec3 g_left_movement = glm::vec3(0.0f, 0.0f, 0.0f),
 glm::vec3 g_win_size = glm::vec3(1.0f, 1.0f, 0.0f),
           g_win_scale = glm::vec3(0.0f, 0.0f, 0.0f);
 
-float g_ball_speed = 1.0f;  // move 1 unit per second
-float g_paddle_speed = 2.5f;
+constexpr float g_start_speed = 2.0f;
+float g_ball_speed = g_start_speed; 
+float g_paddle_speed = 4.0f;
 int NUM_BALLS = 1;
 
 void initialise();
@@ -370,6 +374,11 @@ void update()
     float delta_time = ticks - g_previous_ticks; // the delta time is the difference from the last frame
     g_previous_ticks = ticks;
 
+    // make ball speed a function of time so ball speed increases as match drags on
+    g_ball_speed = g_start_speed + g_start_speed * (ticks / 6000.0f);
+
+    g_angle += ROT_SPEED * delta_time;
+
     // if not end screen
     if (GAME_STATE == 0)
     {    
@@ -389,6 +398,7 @@ void update()
         g_ball_matrix = glm::mat4(1.0f);
         g_ball_matrix = glm::translate(g_ball_matrix, INIT_POS_BALL);
         g_ball_matrix = glm::translate(g_ball_matrix, g_ball_position);
+        g_ball_matrix = glm::rotate(g_ball_matrix, glm::radians(g_angle), glm::vec3(0.0f, 0.0f, 1.0f));
         g_ball_matrix = glm::scale(g_ball_matrix, INIT_SCALE_BALL);
 
         /*------------BALL TWO------------*/
@@ -408,6 +418,7 @@ void update()
             g_ball_matrix2 = glm::mat4(1.0f);
             g_ball_matrix2 = glm::translate(g_ball_matrix2, INIT_POS_BALL);
             g_ball_matrix2 = glm::translate(g_ball_matrix2, g_ball_position2);
+            g_ball_matrix2 = glm::rotate(g_ball_matrix2, glm::radians(-g_angle), glm::vec3(0.0f, 0.0f, 1.0f));
             g_ball_matrix2 = glm::scale(g_ball_matrix2, INIT_SCALE_BALL);
         }
 
@@ -428,35 +439,45 @@ void update()
             g_ball_matrix3 = glm::mat4(1.0f);
             g_ball_matrix3 = glm::translate(g_ball_matrix3, INIT_POS_BALL);
             g_ball_matrix3 = glm::translate(g_ball_matrix3, g_ball_position3);
+            g_ball_matrix3 = glm::rotate(g_ball_matrix3, glm::radians(g_angle), glm::vec3(0.0f, 0.0f, 1.0f));
             g_ball_matrix3 = glm::scale(g_ball_matrix3, INIT_SCALE_BALL);
         }
 
         // if t was pressed 
         if (SINGLE_PLAYER) {
-
-            if (NUM_BALLS == 1 && g_ball_position.x > START_AI && g_ball_movement.x > 0.0f) 
-            {
-                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            // one ball move towards that ball if ball is moving towards it
+            if (NUM_BALLS == 1) {
+                if (g_ball_position.x > START_AI && g_ball_movement.x > 0.0f)
+                {
+                    g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+                }
             }
-            else if (NUM_BALLS == 2 && g_ball_movement.x > 0.0f && g_ball_position.x > START_AI && g_ball_position.x > g_ball_position2.x)
-            {
-                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+            // two ball, choose to move based on whichever is closer and moving in its direction
+            else if (NUM_BALLS == 2) {
+                // ball move towards paddle AND ball greater than distance && ball1 closer than ball2 or second ball might be closer but moving away
+                if (g_ball_movement.x > 0.0f && g_ball_position.x > START_AI && (g_ball_position.x > g_ball_position2.x || g_ball_movement2.x < 0.0f))
+                {
+                    g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+                }
+                // last option so move towards ball2 if ball moving towards
+                else if (g_ball_movement2.x > 0.0f && g_ball_position2.x > START_AI)
+                {
+                    g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
+                }
             }
-            else if (NUM_BALLS == 2 && g_ball_movement2.x > 0.0f && g_ball_position2.x > START_AI)
-            {
-                g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
-            }
-            else if (NUM_BALLS == 3 && g_ball_movement.x > 0.0f && g_ball_position.x > START_AI && g_ball_position.x > g_ball_position2.x && g_ball_position.x > g_ball_position3.x) 
-            {
-                g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
-            }
-            else if (NUM_BALLS == 3 && g_ball_movement2.x > 0.0f && g_ball_position2.x > START_AI && g_ball_position2.x > g_ball_position.x && g_ball_position2.x > g_ball_position3.x) 
-            {
-                g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
-            }
-            else if (NUM_BALLS == 3 && g_ball_movement3.x > 0.0f && g_ball_position3.x > START_AI && g_ball_position3.x > g_ball_position2.x && g_ball_position3.x > g_ball_position.x) 
-            {
-                g_right_movement.y = ((g_ball_position3.y > g_right_position.y) ? 1.0f : -1.0f);
+            else if (NUM_BALLS == 3) {
+                if (g_ball_movement.x > 0.0f && g_ball_position.x > START_AI && (g_ball_position.x > g_ball_position2.x || g_ball_movement2.x < 0.0f) && (g_ball_position.x > g_ball_position3.x || g_ball_movement3.x < 0.0f))
+                {
+                    g_right_movement.y = ((g_ball_position.y > g_right_position.y) ? 1.0f : -1.0f);
+                }
+                else if (g_ball_movement2.x > 0.0f && g_ball_position2.x > START_AI && (g_ball_position2.x > g_ball_position.x || g_ball_movement.x < 0.0f) && (g_ball_position2.x > g_ball_position3.x || g_ball_movement3.x < 0.0f))
+                {
+                    g_right_movement.y = ((g_ball_position2.y > g_right_position.y) ? 1.0f : -1.0f);
+                }
+                else if (g_ball_movement3.x > 0.0f && g_ball_position3.x > START_AI && (g_ball_position3.x > g_ball_position2.x || g_ball_movement2.x < 0.0f) && (g_ball_position3.x > g_ball_position.x || g_ball_movement.x < 0.0f))
+                {
+                    g_right_movement.y = ((g_ball_position3.y > g_right_position.y) ? 1.0f : -1.0f);
+                }
             }
         }
 
