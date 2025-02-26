@@ -168,7 +168,7 @@ GLuint load_texture(const char* filepath)
 void initialise()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    g_display_window = SDL_CreateWindow("It's Another Pong Clone!",
+    g_display_window = SDL_CreateWindow("A Purr-fect Game of Cat-ch!",
         SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         WINDOW_WIDTH, WINDOW_HEIGHT,
         SDL_WINDOW_OPENGL);
@@ -274,12 +274,8 @@ void process_input()
                 break;
 
             // extra stuff for testing
-            // FASTER
             case SDLK_r:
                 restart();
-                break;
-            case SDLK_f:
-                g_ball_speed += 1.0f;
                 break;
             default:
                 break;
