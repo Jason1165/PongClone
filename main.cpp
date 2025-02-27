@@ -63,7 +63,7 @@ bool SINGLE_PLAYER = false; // set default player mode to 2
 
 constexpr char LEFT_SPRITE_FILEPATH[] = "assets/cat_left.png",
                RIGHT_SPRITE_FILEPATH[] = "assets/cat_right.png",
-               BALL_SPRITE_FILEPATH[] = "assets/ball.png",
+               BALL_SPRITE_FILEPATH[] = "assets/mouse.png",
                BALL2_SPRITE_FILEPATH[] = "assets/ball2.png",
                BALL3_SPRITE_FILEPATH[] = "assets/ball3.png",
                P1_SPRITE_FILEPATH[] = "assets/p1_win.png",
